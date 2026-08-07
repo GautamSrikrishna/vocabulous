@@ -1,69 +1,156 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { ResultCards } from "@/components/ResultCards";
+import { WordInput } from "@/components/WordInput";
+import { Wizard, type WizardState } from "@/components/Wizard";
+import type { ApiErrorBody, Lang, LookupResponse } from "@/types";
+
+const SPELL_MESSAGES = [
+  "Mixing the potion…",
+  "Checking my spellbook…",
+  "Asking the owls…",
+  "Stirring up some words…",
+];
+
+const NOT_FOUND_MESSAGE = "I don't know that word yet — check the spelling? 🔍";
+const NOT_SUITABLE_MESSAGE = "Let's try a different word! 🪄";
+
+type Phase = "idle" | "loading" | "done" | "error";
 
 export default function Home() {
+  const [lang, setLang] = useState<Lang>("en");
+  const [word, setWord] = useState("");
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [result, setResult] = useState<LookupResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [spell, setSpell] = useState(SPELL_MESSAGES[0]);
+
+  /** The word that produced what's on screen — used to redo it in the other language. */
+  const [lastWord, setLastWord] = useState("");
+  /** Guards against a slow first request overwriting a fast second one. */
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (phase !== "loading") return;
+    const timer = setInterval(() => {
+      setSpell(SPELL_MESSAGES[Math.floor(Math.random() * SPELL_MESSAGES.length)]);
+    }, 1600);
+    return () => clearInterval(timer);
+  }, [phase]);
+
+  const lookup = useCallback(async (rawWord: string, outputLang: Lang) => {
+    const trimmed = rawWord.trim();
+    if (!trimmed) return;
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    setLastWord(trimmed);
+    setPhase("loading");
+    setError(null);
+    setSpell(SPELL_MESSAGES[Math.floor(Math.random() * SPELL_MESSAGES.length)]);
+
+    try {
+      const response = await fetch("/api/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: trimmed, outputLang }),
+      });
+      const data = (await response.json()) as LookupResponse & Partial<ApiErrorBody>;
+
+      if (requestIdRef.current !== requestId) return; // a newer lookup won
+
+      if (!response.ok) {
+        setError(data.error ?? "My spellbook got stuck! Try again. 🪄");
+        setPhase("error");
+        return;
+      }
+
+      if (data.status === "unknown_word") {
+        setError(NOT_FOUND_MESSAGE);
+        setPhase("error");
+        return;
+      }
+      if (data.status === "not_kid_appropriate") {
+        setError(NOT_SUITABLE_MESSAGE);
+        setPhase("error");
+        return;
+      }
+
+      setResult(data);
+      setPhase("done");
+    } catch {
+      if (requestIdRef.current !== requestId) return;
+      setError("I couldn't reach my spellbook. Is the internet working?");
+      setPhase("error");
+    }
+  }, []);
+
+  /** Flipping the toggle re-asks the same word in the new language. */
+  function changeLanguage(next: Lang) {
+    if (next === lang) return;
+    setLang(next);
+    setResult(null);
+    if (lastWord) void lookup(lastWord, next);
+  }
+
+  const wizardState: WizardState =
+    phase === "loading" ? "thinking" : phase === "done" ? "celebrating" : "idle";
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="page">
+      <header className="header">
+        <Wizard state={wizardState} />
+        <h1 className="title">Vocabulous</h1>
+        <p className="tagline">Type or say a word — I&rsquo;ll do the rest! ✨</p>
+        <LanguageToggle value={lang} onChange={changeLanguage} disabled={phase === "loading"} />
+      </header>
+
+      <WordInput
+        value={word}
+        onChange={setWord}
+        onSubmit={() => void lookup(word, lang)}
+        onError={(message) => {
+          setError(message);
+          setPhase("error");
+        }}
+        lang={lang}
+        busy={phase === "loading"}
+      />
+
+      <div aria-live="polite" aria-atomic="true">
+        {phase === "loading" && (
+          <div className="status">
+            <p className="status__text">{spell}</p>
+          </div>
+        )}
+
+        {phase === "error" && error && (
+          <div className="status">
+            <div className="status__card">
+              <p>{error}</p>
+              {lastWord && (
+                <button
+                  type="button"
+                  className="retry"
+                  onClick={() => void lookup(lastWord, lang)}
+                >
+                  Try again
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {phase === "done" && result && <ResultCards result={result} />}
+      </div>
+
+      <footer className="footer">
+        <p>Made for word wizards in training 🧙</p>
+      </footer>
+    </main>
   );
 }

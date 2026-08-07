@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧙 Vocabulous — the Word Wizard
 
-## Getting Started
+A vocabulary helper for a 10-year-old. Type or say a word and it comes back with the
+**meaning, synonyms, antonyms and an example sentence** — in **English or Kannada** — with a
+button to hear any of it read aloud.
 
-First, run the development server:
+Powered by [Sarvam AI](https://docs.sarvam.ai), whose models are built for Indic languages.
+
+---
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env     # then paste your key into .env
+npm run dev              # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Get a key from the [Sarvam dashboard](https://dashboard.sarvam.ai) and put it in `.env`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+SARVAM_API_KEY=sk_your_real_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Until a real key is in place, the app loads and shows *"The wizard has no magic key yet!"*
+when you look a word up. Restart the dev server after editing `.env`.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## How it works
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**The language toggle sets the language of the *answer*, not the question.** He can type
+`happy` with ಕನ್ನಡ selected and get the whole answer in Kannada — the wizard works out what
+language the word arrived in on its own.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Feature | What happens |
+|---|---|
+| 🔤 **Type a word** | Any word, either language, either script. |
+| 🎤 **Say a word** | Tap the mic, tap again to stop. The transcript lands in the text box **so he can fix it** before pressing Find out — single-word speech recognition gets it wrong often enough that this step matters. |
+| ⌨️ **Kannada typing** | Type `naayi` and a chip offers **ನಾಯಿ**. Tap to use it. Never auto-replaces. |
+| 🔊 **Hear it** | Speaker buttons on the word and the example sentence, in the answer language. |
 
-## Deploy on Vercel
+If a word has no real opposite, the antonym card says so rather than inventing one. Gibberish
+gets *"I don't know that word yet"*, and anything unsuitable for a 10-year-old is declined by
+the model and blanked on the server before it can reach the browser.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Where the API key lives
+
+**Server-side only.** Every Sarvam call goes through a Next.js route handler:
+
+| Route | Sarvam endpoint |
+|---|---|
+| `POST /api/lookup` | `/v1/chat/completions` — strict JSON Schema, re-validated with zod |
+| `POST /api/transcribe` | `/speech-to-text` |
+| `POST /api/speak` | `/text-to-speech` → returns MP3 bytes |
+| `POST /api/transliterate` | `/transliterate` |
+
+Two things keep the key out of the browser, and both are deliberate:
+
+1. **No env var is prefixed `NEXT_PUBLIC_`.** Anything with that prefix is compiled into the
+   JS bundle, which is exactly how API keys leak.
+2. **`lib/sarvam.ts` imports `server-only`.** If a client component ever imports it, the
+   build fails instead of quietly shipping the key.
+
+You can check this yourself at any time:
+
+```bash
+npm run build && grep -r "api-subscription-key\|api.sarvam.ai" .next/static/
+```
+
+That should find nothing.
+
+---
+
+## Project layout
+
+```
+app/
+  page.tsx            the single screen
+  api/                the four Sarvam proxy routes
+  globals.css         the sticker-book theme
+lib/
+  sarvam.ts           server-only Sarvam client  ← the key lives here
+  schema.ts           JSON Schema sent to the model + zod re-validation
+  prompts.ts          system prompt (reading age, answer language, safety)
+  cache.ts            in-memory LRU, so repeat lookups are free
+components/           Wizard, LanguageToggle, WordInput, MicButton, SpeakButton, ResultCards
+```
+
+## Notes
+
+- **Microphone** needs `localhost` or HTTPS. Both dev and a Vercel deploy qualify.
+- **Sarvam matches the upload's MIME type exactly.** `MediaRecorder` stamps blobs
+  `audio/webm;codecs=opus`, and that `;codecs=` parameter is rejected with a 400 even though
+  bare `audio/webm` is allowed. `speechToText` strips it before uploading — don't remove that.
+- **Use `sarvam-105b-conversations`, not plain `sarvam-105b`.** The base model is a *reasoning*
+  model: it spends 1300+ tokens thinking before writing anything, so with a normal `max_tokens`
+  it hits the limit and returns `content: null` — the lookup fails with no obvious cause. The
+  conversational variant answers the same question in ~75 tokens. `sarvam-m` is deprecated.
+- **`max_tokens` is capped at 2048** on the starter subscription tier; this app sends 1024.
+- **Kannada synonyms for less common words can be wrong.** The model occasionally offers a
+  near-miss (it suggested ಕಾಯಿ for ನಾಯಿ once). Worth a glance before the homework is handed in.
+- **The lookup cache is in memory**, so it resets when the server restarts. That is on
+  purpose: it saves API calls and has no role in correctness.
+
+---
+
+## Deploying
+
+Push to GitHub, import the repo at [vercel.com](https://vercel.com), and add `SARVAM_API_KEY`
+as an environment variable in the project settings. `.env` is gitignored, so the key never
+travels with the code.

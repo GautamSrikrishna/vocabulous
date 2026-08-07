@@ -1,49 +1,639 @@
+/* ==========================================================================
+   Vocabulous — a word wizard for a 10-year-old.
+
+   Visual idea: sticker book. Chunky rounded shapes, thick dark outlines, hard
+   offset shadows, saturated but warm colours. Everything is big enough to
+   poke with a finger on a tablet.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Surfaces */
+  --sky-top: #fff3d6;
+  --sky-bottom: #ffe0e9;
+  --paper: #fffdf7;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  /* Ink & outlines */
+  --ink: #2d2150;
+  --ink-soft: #6a5b93;
+  --outline: #2d2150;
 
-html {
-  height: 100%;
-}
+  /* Card personalities */
+  --sun: #ffd166; /* meaning   */
+  --mint: #3ddc97; /* synonym   */
+  --coral: #ff6b6b; /* antonym   */
+  --violet: #b088f9; /* sentence  */
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  /* Actions */
+  --go: #ff9f1c;
+  --go-dark: #f07800;
+  --mic: #4ea8de;
+  --mic-live: #ff4d6d;
 
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Shape language */
+  --radius: 24px;
+  --radius-sm: 16px;
+  --border: 3px;
+  --shadow: 5px 5px 0 var(--outline);
+  --shadow-sm: 3px 3px 0 var(--outline);
+
+  --page-width: 680px;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
+}
+
+html,
+body {
   margin: 0;
+  padding: 0;
 }
 
-a {
+body {
+  min-height: 100dvh;
+  background: linear-gradient(170deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-round), "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Kannada glyphs sit slightly small next to Latin at the same size. */
+:lang(kn) {
+  font-size: 1.06em;
+  line-height: 1.65;
+}
+
+button {
+  font: inherit;
   color: inherit;
-  text-decoration: none;
+  cursor: pointer;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Visible focus everywhere — this app gets used with a keyboard too. */
+:focus-visible {
+  outline: 4px solid var(--go);
+  outline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Layout */
+
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.4rem, 9vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: #6a3fd6;
+  text-shadow: 3px 3px 0 #fffdf7, 6px 6px 0 rgba(45, 33, 80, 0.15);
+}
+
+.tagline {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* ----------------------------------------------------------- Language toggle */
+
+.toggle {
+  display: inline-flex;
+  padding: 5px;
+  gap: 4px;
+  background: var(--paper);
+  border: var(--border) solid var(--outline);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+
+.toggle__option {
+  min-height: 46px;
+  padding: 4px 22px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.toggle__option:hover:not([aria-pressed="true"]) {
+  background: rgba(106, 63, 214, 0.1);
+}
+
+.toggle__option[aria-pressed="true"] {
+  background: #6a3fd6;
+  color: #fff;
+  transform: scale(1.04);
+}
+
+/* ------------------------------------------------------------------ Wizard */
+
+.wizard {
+  width: 96px;
+  height: 96px;
+  flex: none;
+}
+
+.wizard--idle {
+  animation: bob 3.2s ease-in-out infinite;
+}
+
+.wizard--thinking {
+  animation: bob 0.9s ease-in-out infinite;
+}
+
+.wizard--celebrating {
+  animation: pop-bounce 0.6s ease-out;
+}
+
+.wizard__sparkle {
+  transform-origin: 60px 60px;
+  opacity: 0;
+}
+
+.wizard--thinking .wizard__sparkle,
+.wizard--celebrating .wizard__sparkle {
+  animation: twinkle 1.1s ease-in-out infinite;
+}
+
+.wizard__sparkle:nth-of-type(2) {
+  animation-delay: 0.35s;
+}
+
+.wizard__sparkle:nth-of-type(3) {
+  animation-delay: 0.7s;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
   }
+  50% {
+    transform: translateY(-7px) rotate(1deg);
+  }
+}
+
+@keyframes pop-bounce {
+  0% {
+    transform: scale(0.8) rotate(-6deg);
+  }
+  55% {
+    transform: scale(1.14) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* ------------------------------------------------------------------- Input */
+
+.search {
+  margin-top: 22px;
+  padding: 16px;
+  background: var(--paper);
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.search__row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 60px;
+  padding: 10px 18px;
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.search__input::placeholder {
+  color: #b3a8cc;
+  font-weight: 600;
+}
+
+.mic {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--mic);
+  box-shadow: var(--shadow-sm);
+  font-size: 1.6rem;
+  line-height: 1;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.2s ease;
+}
+
+.mic:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+.mic--recording {
+  background: var(--mic-live);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.mic:disabled {
+  opacity: 0.5;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.09);
+  }
+}
+
+.go {
+  width: 100%;
+  min-height: 60px;
+  margin-top: 12px;
+  padding: 10px 24px;
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: var(--go);
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.2s ease;
+}
+
+.go:hover:not(:disabled) {
+  background: var(--go-dark);
+}
+
+.go:active:not(:disabled) {
+  transform: translate(5px, 5px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+.go:disabled {
+  opacity: 0.55;
+  box-shadow: var(--shadow);
+}
+
+.hint {
+  margin: 10px 2px 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* Transliteration suggestion: "Did you mean ನಾಯಿ?" */
+.suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.suggest__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.suggest__chip {
+  min-height: 46px;
+  padding: 6px 20px;
+  border: var(--border) solid var(--outline);
+  border-radius: 999px;
+  background: #e8dcff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.suggest__chip:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+/* ------------------------------------------------------------------ Status */
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+  text-align: center;
+}
+
+.status__text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.status__card {
+  width: 100%;
+  padding: 24px;
+  background: var(--paper);
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.status__card p {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.retry {
+  min-height: 48px;
+  margin-top: 16px;
+  padding: 8px 26px;
+  border: var(--border) solid var(--outline);
+  border-radius: 999px;
+  background: var(--sun);
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+
+.retry:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+/* ------------------------------------------------------------------- Cards */
+
+.results {
+  margin-top: 28px;
+  display: grid;
+  gap: 16px;
+}
+
+.headword {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px 22px;
+  background: var(--paper);
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.headword__word {
+  margin: 0;
+  font-size: clamp(1.9rem, 7vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.headword__pos {
+  padding: 3px 14px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  background: #efe8ff;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.card {
+  padding: 18px 20px;
+  border: var(--border) solid var(--outline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: card-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.card--meaning {
+  background: var(--sun);
+}
+.card--synonym {
+  background: var(--mint);
+}
+.card--antonym {
+  background: var(--coral);
+}
+.card--sentence {
+  background: var(--violet);
+}
+
+/* Staggered reveal, one card after another. */
+.card:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.card:nth-child(3) {
+  animation-delay: 0.18s;
+}
+.card:nth-child(4) {
+  animation-delay: 0.26s;
+}
+.card:nth-child(5) {
+  animation-delay: 0.34s;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Kannada has no letter case, and extra tracking pulls conjunct clusters apart. */
+.card__title:lang(kn) {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 1.15rem;
+}
+
+.card__body {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card__chip {
+  padding: 7px 16px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.card__empty {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------ Speak button */
+
+.speak {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--outline);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 1.25rem;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.speak:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+.speak--playing {
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.speak:disabled {
+  opacity: 0.55;
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ------------------------------------------------------------------ Footer */
+
+.footer {
+  margin-top: 40px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* ---------------------------------------------------- Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ----------------------------------------------------------- Wider screens */
+
+@media (min-width: 560px) {
+  .search__row {
+    gap: 12px;
+  }
+
+  /* The Find out! button stays full width at every size — it is the one thing
+     on screen a child needs to hit without aiming. */
 }
