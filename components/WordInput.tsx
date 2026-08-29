@@ -20,7 +20,7 @@ export function WordInput({
 }: {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (word: string) => void;
   onError: (message: string) => void;
   lang: Lang;
   busy: boolean;
@@ -79,12 +79,33 @@ export function WordInput({
     inputRef.current?.focus();
   }
 
+  /**
+   * The input element is the source of truth at submit time, not React state.
+   * A browser can put text in the box without React ever seeing an event —
+   * autofill, form restore after a reload or a back-navigation, a password
+   * manager, or the child typing before hydration attaches. Gating the button
+   * on state that missed all of those strands them in front of a dead button
+   * with their word already typed and no way to recover but retyping it.
+   *
+   * So: never disable on emptiness, read the DOM on the way through, and
+   * re-sync state. An empty box just takes the cursor.
+   */
+  function submit() {
+    const typed = (inputRef.current?.value ?? value).trim();
+    if (!typed) {
+      inputRef.current?.focus();
+      return;
+    }
+    if (typed !== value) onChange(typed);
+    onSubmit(typed);
+  }
+
   return (
     <form
       className="search"
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit();
+        submit();
       }}
     >
       <label className="sr-only" htmlFor="word">
@@ -119,7 +140,7 @@ export function WordInput({
         />
       </div>
 
-      <button type="submit" className="go" disabled={busy || value.trim() === ""}>
+      <button type="submit" className="go" disabled={busy}>
         {busy ? "Casting…" : "✨ Find out!"}
       </button>
 

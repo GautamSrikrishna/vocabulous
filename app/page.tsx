@@ -116,7 +116,7 @@ export default function Home() {
       <WordInput
         value={word}
         onChange={setWord}
-        onSubmit={() => void lookup(word, lang)}
+        onSubmit={(typed) => void lookup(typed, lang)}
         onError={(message) => {
           setError(message);
           setPhase("error");
