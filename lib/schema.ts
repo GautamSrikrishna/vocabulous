@@ -60,11 +60,28 @@ export const LOOKUP_JSON_SCHEMA = {
   },
 } as const;
 
-/** Trims strings and drops empty entries so the UI never renders a blank chip. */
-const wordList = z
-  .array(z.string())
-  .max(6)
-  .transform((items) => items.map((item) => item.trim()).filter(Boolean).slice(0, 3));
+/**
+ * Trims, de-duplicates and caps the list.
+ *
+ * Deliberately a transform rather than a `.max()` check: a model that returns
+ * seven synonyms has still answered the question, and rejecting the whole
+ * object over it would fail an otherwise perfect lookup. Duplicates are dropped
+ * case-insensitively because the words double as React keys.
+ */
+const wordList = z.array(z.string()).transform((items) => {
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const item of items) {
+    const word = item.trim();
+    if (!word) continue;
+    const key = word.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(word);
+    if (kept.length === 3) break;
+  }
+  return kept;
+});
 
 export const lookupSchema = z.object({
   word: z.string().trim(),

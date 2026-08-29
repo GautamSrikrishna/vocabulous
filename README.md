@@ -39,6 +39,7 @@ language the word arrived in on its own.
 | 🎤 **Say a word** | Tap the mic, tap again to stop. The transcript lands in the text box **so he can fix it** before pressing Find out — single-word speech recognition gets it wrong often enough that this step matters. |
 | ⌨️ **Kannada typing** | Type `naayi` and a chip offers **ನಾಯಿ**. Tap to use it. Never auto-replaces. |
 | 🔊 **Hear it** | Speaker buttons on the word and the example sentence, in the answer language. |
+| 🕘 **Recent words** | The last 8 words come back as chips — tap to look one up again. |
 
 If a word has no real opposite, the antonym card says so rather than inventing one. Gibberish
 gets *"I don't know that word yet"*, and anything unsuitable for a 10-year-old is declined by
@@ -85,13 +86,14 @@ lib/
   sarvam.ts           server-only Sarvam client  ← the key lives here
   schema.ts           JSON Schema sent to the model + zod re-validation
   prompts.ts          system prompt (reading age, answer language, safety)
-  cache.ts            in-memory LRU, so repeat lookups are free
+  cache.ts            LRU caches; lookups persist to .cache/ between sessions
+  prefs.ts            language + recent words, in localStorage
 components/           Wizard, LanguageToggle, WordInput, MicButton, SpeakButton, ResultCards
 ```
 
 ## Notes
 
-- **Microphone** needs `localhost` or HTTPS. Both dev and a Vercel deploy qualify.
+- **Microphone** needs `localhost` or HTTPS, so `npm run dev` on this machine is fine.
 - **Sarvam matches the upload's MIME type exactly.** `MediaRecorder` stamps blobs
   `audio/webm;codecs=opus`, and that `;codecs=` parameter is rejected with a 400 even though
   bare `audio/webm` is allowed. `speechToText` strips it before uploading — don't remove that.
@@ -102,13 +104,9 @@ components/           Wizard, LanguageToggle, WordInput, MicButton, SpeakButton,
 - **`max_tokens` is capped at 2048** on the starter subscription tier; this app sends 1024.
 - **Kannada synonyms for less common words can be wrong.** The model occasionally offers a
   near-miss (it suggested ಕಾಯಿ for ನಾಯಿ once). Worth a glance before the homework is handed in.
-- **The lookup cache is in memory**, so it resets when the server restarts. That is on
-  purpose: it saves API calls and has no role in correctness.
+- **The lookup cache is written to `.cache/lookups.json`** so it survives restarts. The app
+  is started fresh whenever it's needed, so an in-memory-only cache would never warm up and
+  every session would re-pay for the previous session's words. Delete the file any time —
+  it costs API calls, never correctness. Transliteration stays in memory on purpose: it
+  caches half-typed prefixes, which aren't worth keeping.
 
----
-
-## Deploying
-
-Push to GitHub, import the repo at [vercel.com](https://vercel.com), and add `SARVAM_API_KEY`
-as an environment variable in the project settings. `.env` is gitignored, so the key never
-travels with the code.

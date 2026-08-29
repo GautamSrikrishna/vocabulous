@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const cleanText = text.trim().slice(0, MAX_INPUT_LENGTH);
-  const cacheKey = `${lang}|${cleanText.toLocaleLowerCase()}`;
+  const cacheKey = `${lang}|${cleanText.toLowerCase()}`;
 
   const cached = cache.get(cacheKey);
   if (cached !== undefined) {

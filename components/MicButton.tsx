@@ -61,7 +61,13 @@ export function MicButton({
   useEffect(
     () => () => {
       clearTimer();
-      recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+      const recorder = recorderRef.current;
+      if (!recorder) return;
+      // Detach first: stopping the recorder fires `onstop`, and there is no
+      // point transcribing a recording for a component that is going away.
+      recorder.onstop = null;
+      if (recorder.state !== "inactive") recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
     },
     [clearTimer],
   );

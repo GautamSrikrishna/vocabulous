@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { RecentWords } from "@/components/RecentWords";
 import { ResultCards } from "@/components/ResultCards";
 import { WordInput } from "@/components/WordInput";
 import { Wizard, type WizardState } from "@/components/Wizard";
+import { useLang, useRecentWords } from "@/lib/prefs";
 import type { ApiErrorBody, Lang, LookupResponse } from "@/types";
 
 const SPELL_MESSAGES = [
@@ -21,7 +23,8 @@ const NOT_SUITABLE_MESSAGE = "Let's try a different word! 🪄";
 type Phase = "idle" | "loading" | "done" | "error";
 
 export default function Home() {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
+  const [recent, remember] = useRecentWords();
   const [word, setWord] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<LookupResponse | null>(null);
@@ -82,12 +85,13 @@ export default function Home() {
 
       setResult(data);
       setPhase("done");
+      remember(trimmed);
     } catch {
       if (requestIdRef.current !== requestId) return;
       setError("I couldn't reach my spellbook. Is the internet working?");
       setPhase("error");
     }
-  }, []);
+  }, [remember]);
 
   /** Flipping the toggle re-asks the same word in the new language. */
   function changeLanguage(next: Lang) {
@@ -121,7 +125,16 @@ export default function Home() {
         busy={phase === "loading"}
       />
 
-      <div aria-live="polite" aria-atomic="true">
+      <RecentWords
+        words={recent}
+        disabled={phase === "loading"}
+        onPick={(picked) => {
+          setWord(picked);
+          void lookup(picked, lang);
+        }}
+      />
+
+      <div aria-live="polite">
         {phase === "loading" && (
           <div className="status">
             <p className="status__text">{spell}</p>

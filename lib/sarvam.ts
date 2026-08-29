@@ -58,7 +58,7 @@ export const MODELS = {
   stt: () => envOr("SARVAM_STT_MODEL", "saaras:v4"),
   tts: () => envOr("SARVAM_TTS_MODEL", "bulbul:v3"),
   /** Female voice. Speaker names are validated per model — bulbul:v2 names are rejected by v3. */
-  ttsSpeaker: () => envOr("SARVAM_TTS_SPEAKER", "ritu").toLowerCase(),
+  ttsSpeaker: () => envOr("SARVAM_TTS_SPEAKER", "shreya").toLowerCase(),
 };
 
 const GENERIC_FAILURE = "My spellbook got stuck! Try again. \u{1FA84}";
@@ -195,8 +195,8 @@ const AUDIO_EXTENSIONS: Record<string, string> = {
  */
 export async function speechToText(audio: Blob, lang: Lang): Promise<string> {
   const baseType = audio.type.split(";")[0].trim().toLowerCase() || "audio/webm";
-  const normalised =
-    baseType === audio.type ? audio : new Blob([await audio.arrayBuffer()], { type: baseType });
+  // `slice` re-labels the blob without reading the bytes into memory.
+  const normalised = baseType === audio.type ? audio : audio.slice(0, audio.size, baseType);
 
   const form = new FormData();
   // Sarvam also looks at the filename extension, so keep the two consistent.

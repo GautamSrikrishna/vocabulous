@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { LruCache } from "@/lib/cache";
+import { CACHE_DIR, PersistentLruCache } from "@/lib/cache";
 import { systemPrompt, userPrompt } from "@/lib/prompts";
 import { LOOKUP_JSON_SCHEMA, parseLookup, redact } from "@/lib/schema";
 import { SarvamError, chatCompletionJson } from "@/lib/sarvam";
@@ -9,7 +9,7 @@ import { isLang, type LookupResponse, type LookupResult } from "@/types";
 /** Longest word we'll accept — this is a single-word tool, not a translator. */
 const MAX_WORD_LENGTH = 60;
 
-const cache = new LruCache<LookupResult>(500);
+const cache = new PersistentLruCache<LookupResult>(`${CACHE_DIR}/lookups.json`, 500);
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -29,9 +29,9 @@ export async function POST(request: Request) {
   }
 
   const cleanWord = word.trim().slice(0, MAX_WORD_LENGTH);
-  const cacheKey = `${outputLang}|${cleanWord.toLocaleLowerCase()}`;
+  const cacheKey = `${outputLang}|${cleanWord.toLowerCase()}`;
 
-  const cached = cache.get(cacheKey);
+  const cached = await cache.get(cacheKey);
   if (cached) {
     return NextResponse.json({ ...cached, lang: outputLang } satisfies LookupResponse);
   }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
 
     const safe = redact(result);
-    if (safe.status === "ok") cache.set(cacheKey, safe);
+    if (safe.status === "ok") await cache.set(cacheKey, safe);
 
     return NextResponse.json({ ...safe, lang: outputLang } satisfies LookupResponse);
   } catch (error) {

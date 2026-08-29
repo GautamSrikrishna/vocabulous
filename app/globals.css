@@ -615,6 +615,54 @@ button:disabled {
   color: var(--ink-soft);
 }
 
+/* ------------------------------------------------------------- Recent words */
+
+/* Secondary to the search box on purpose: a shortcut for the second evening
+   on the same spelling list, not something to distract from typing a new word. */
+
+.recent {
+  margin: 24px 2px 0;
+}
+
+.recent__title {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.recent__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent__chip {
+  min-height: 44px;
+  padding: 6px 18px;
+  border: var(--border) solid var(--outline);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.recent__chip:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--outline);
+}
+
+.recent__chip:disabled {
+  opacity: 0.5;
+}
+
 /* ---------------------------------------------------- Reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
