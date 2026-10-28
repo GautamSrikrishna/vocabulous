@@ -60,13 +60,15 @@ npm run build && grep -r "api-subscription-key\|api.sarvam.ai" .next/static/
 - **TTS speaker names are validated per model, and on `bulbul:v4-flash` per language too.** v4-flash speakers are persona IDs (`nupur_en_kids`, `chaitra_kn_narration`) and reject v3 short names (`shreya`, `shubh`), just as v3 rejected v2's `anushka`. So there's one speaker per answer language (`SARVAM_TTS_SPEAKER_EN` / `_KN`). Changing `SARVAM_TTS_MODEL` means changing both speakers with it. Kannada voices are listed in `.env.example`.
 - **Microphone needs `localhost` or HTTPS.**
 - **The lookup cache will make a prompt or model change look like it did nothing.** The cache key is `lang|word` — it carries no prompt or model version. So after editing `lib/prompts.ts`, or changing `SARVAM_CHAT_MODEL`, every word already looked up keeps returning the *old* answer from `.cache/lookups.json`, on disk, across restarts. Run `rm -rf .cache` before testing any change to how the model is asked.
-- **`app/error.tsx` takes `retry`, not `reset`.** `retry` became stable in Next 16.3.0 (this version) and re-fetches; `reset` only clears the boundary. Older examples in training data use `reset`.
+- **`app/error.tsx` takes `retry`, not `reset`.** `retry` became stable in Next 16.3.0 and re-fetches; `reset` only clears the boundary. Older examples in training data use `reset`.
+- **`npm install <pkg>@x.y.z` silently loosens a pin to `^x.y.z`.** `next` and `eslint-config-next` are pinned to exact versions on purpose, because Next minors change behaviour this app relies on. Upgrade them with `npm install --save-exact`, and check the `package.json` diff before committing.
 
 ## Product conventions
 
 - **Transcripts and transliterations are suggestions, never auto-applied.** The mic drops its transcript into the text box for the child to fix before submitting; the Kannada chip must be tapped. Single-word recognition is wrong often enough that both matter.
 - **Every user-visible string is written for a 10-year-old**, in both English and Kannada — see the `LABELS` map in `ResultCards.tsx`. Add new copy in both languages.
 - **Transliterate failures stay silent** (`/api/transliterate` returns `{ transliterated: "" }` on error): it's a convenience the child didn't ask for, so it must not produce an error card.
+- **Three example sentences, deliberately varied.** The child uses them as patterns for writing their own sentences, so one isn't enough and three near-copies are no better. The prompt asks for a different topic each and, where the language allows, the word in a different position. The "Now make your own!" line under them is part of that loop.
 - **Empty `antonyms` is a legitimate result** ("dog", "Tuesday"), rendered as a friendly line rather than an error. The prompt explicitly forbids inventing one.
 - **Styling is hand-written CSS in `app/globals.css`** — a "sticker book" system of CSS custom properties (chunky radii, 3px outlines, hard offset shadows, tap targets sized for a tablet). No Tailwind, no CSS modules. Reuse the tokens at the top of that file.
 - **`Baloo_Tamma_2` covers both Latin and Kannada**, which is why English and Kannada answers look like one app. Set `lang` on any element rendering answer text.
