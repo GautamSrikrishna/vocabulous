@@ -56,9 +56,16 @@ export const MODELS = {
    */
   chat: () => envOr("SARVAM_CHAT_MODEL", "sarvam-105b-conversations"),
   stt: () => envOr("SARVAM_STT_MODEL", "saaras:v4"),
-  tts: () => envOr("SARVAM_TTS_MODEL", "bulbul:v3"),
-  /** Female voice. Speaker names are validated per model — bulbul:v2 names are rejected by v3. */
-  ttsSpeaker: () => envOr("SARVAM_TTS_SPEAKER", "shreya").toLowerCase(),
+  tts: () => envOr("SARVAM_TTS_MODEL", "bulbul:v4-flash"),
+  /**
+   * One voice per language. bulbul:v4-flash speakers are per-language persona
+   * IDs (`<name>_<lang>_<style>`), and v3 short names like `shreya` are rejected.
+   */
+  ttsSpeaker: (lang: Lang) =>
+    (lang === "kn"
+      ? envOr("SARVAM_TTS_SPEAKER_KN", "chaitra_kn_narration")
+      : envOr("SARVAM_TTS_SPEAKER_EN", "nupur_en_kids")
+    ).toLowerCase(),
 };
 
 const GENERIC_FAILURE = "My spellbook got stuck! Try again. \u{1FA84}";
@@ -133,7 +140,7 @@ export async function chatCompletionJson(options: {
       messages: options.messages,
       temperature: options.temperature ?? 0.3,
       // A lookup uses ~100 tokens, so this is ample headroom while staying
-      // under the 2048 ceiling the starter subscription tier enforces.
+      // under the 4096 ceiling the starter subscription tier enforces.
       max_tokens: options.maxTokens ?? 1024,
       response_format: {
         type: "json_schema",
@@ -223,7 +230,7 @@ export async function textToSpeech(text: string, lang: Lang): Promise<ArrayBuffe
       target_language_code: LANG_CODES[lang],
       language_code: LANG_CODES[lang],
       model: MODELS.tts(),
-      speaker: MODELS.ttsSpeaker(),
+      speaker: MODELS.ttsSpeaker(lang),
       output_audio_codec: "mp3",
       pace: 0.9, // a touch slower than default — this is for a child learning the word
     }),

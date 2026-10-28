@@ -55,9 +55,9 @@ npm run build && grep -r "api-subscription-key\|api.sarvam.ai" .next/static/
 ## Gotchas that will silently break things
 
 - **Use `sarvam-105b-conversations`, not `sarvam-105b`.** The base model reasons for 1300+ tokens before writing, blows through `max_tokens`, and returns `content: null` — which looks like a generic API failure. `sarvam-105b-conversations` answers in ~75 tokens. `sarvam-m` is deprecated.
-- **`max_tokens` is capped at 2048** on the starter tier; this app sends 1024.
+- **`max_tokens` is capped at 4096** on the starter tier; this app sends 1024.
 - **Sarvam matches the upload MIME type exactly.** `MediaRecorder` stamps `audio/webm;codecs=opus`, which is rejected with a 400 even though bare `audio/webm` is fine. `speechToText` strips the `;codecs=` parameter and keeps the filename extension consistent with the type — don't remove that.
-- **TTS speaker names are validated per model.** `bulbul:v3` rejects `bulbul:v2` names (`anushka` and friends). Valid v3 voices are listed in `.env.example`.
+- **TTS speaker names are validated per model, and on `bulbul:v4-flash` per language too.** v4-flash speakers are persona IDs (`nupur_en_kids`, `chaitra_kn_narration`) and reject v3 short names (`shreya`, `shubh`), just as v3 rejected v2's `anushka`. So there's one speaker per answer language (`SARVAM_TTS_SPEAKER_EN` / `_KN`). Changing `SARVAM_TTS_MODEL` means changing both speakers with it. Kannada voices are listed in `.env.example`.
 - **Microphone needs `localhost` or HTTPS.**
 - **The lookup cache will make a prompt or model change look like it did nothing.** The cache key is `lang|word` — it carries no prompt or model version. So after editing `lib/prompts.ts`, or changing `SARVAM_CHAT_MODEL`, every word already looked up keeps returning the *old* answer from `.cache/lookups.json`, on disk, across restarts. Run `rm -rf .cache` before testing any change to how the model is asked.
 - **`app/error.tsx` takes `retry`, not `reset`.** `retry` became stable in Next 16.3.0 (this version) and re-fetches; `reset` only clears the boundary. Older examples in training data use `reset`.
