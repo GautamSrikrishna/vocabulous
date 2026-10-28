@@ -598,11 +598,29 @@ button:disabled {
   opacity: 0.55;
 }
 
-.card__header {
+.card__sentences {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card__sentence {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border: 2px solid var(--outline);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.card__nudge {
+  margin: 14px 0 0;
+  font-size: 1.15rem;
+  font-weight: 800;
 }
 
 /* ------------------------------------------------------------------ Footer */

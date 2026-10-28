@@ -14,6 +14,7 @@ const LABELS = {
     noSynonym: "I couldn't find a good match for this one.",
     hearWord: "Hear the word",
     hearSentence: "Hear the sentence",
+    tryYourOwn: "Now make your own! ✏️",
   },
   kn: {
     meaning: "ಅರ್ಥ",
@@ -24,6 +25,7 @@ const LABELS = {
     noSynonym: "ಈ ಪದಕ್ಕೆ ಸರಿಯಾದ ಸಮಾನಾರ್ಥಕ ಪದ ಸಿಗಲಿಲ್ಲ.",
     hearWord: "ಪದವನ್ನು ಕೇಳಿ",
     hearSentence: "ವಾಕ್ಯವನ್ನು ಕೇಳಿ",
+    tryYourOwn: "ಈಗ ನೀನೇ ಒಂದು ವಾಕ್ಯ ಮಾಡು! ✏️",
   },
 } as const satisfies Record<Lang, Record<string, string>>;
 
@@ -88,14 +90,21 @@ export function ResultCards({ result }: { result: LookupResponse }) {
       </section>
 
       <section className="card card--sentence">
-        <div className="card__header">
-          <h3 className="card__title" lang={lang}>
-            <span aria-hidden="true">💜</span> {text.sentence}
-          </h3>
-          <SpeakButton text={result.exampleSentence} lang={lang} label={text.hearSentence} />
-        </div>
-        <p className="card__body" lang={lang}>
-          {result.exampleSentence}
+        <h3 className="card__title" lang={lang}>
+          <span aria-hidden="true">💜</span> {text.sentence}
+        </h3>
+        <ol className="card__sentences">
+          {result.exampleSentences.map((sentence, i) => (
+            <li key={sentence} className="card__sentence">
+              <p className="card__body" lang={lang}>
+                {sentence}
+              </p>
+              <SpeakButton text={sentence} lang={lang} label={`${text.hearSentence} ${i + 1}`} />
+            </li>
+          ))}
+        </ol>
+        <p className="card__nudge" lang={lang}>
+          {text.tryYourOwn}
         </p>
       </section>
     </div>

@@ -22,7 +22,7 @@ export const LOOKUP_JSON_SCHEMA = {
       "meaning",
       "synonyms",
       "antonyms",
-      "exampleSentence",
+      "exampleSentences",
       "status",
     ],
     properties: {
@@ -48,9 +48,10 @@ export const LOOKUP_JSON_SCHEMA = {
         items: { type: "string" },
         description: "1 to 3 opposites, or an empty array if the word has no true opposite.",
       },
-      exampleSentence: {
-        type: "string",
-        description: "One sentence under 12 words that uses the word.",
+      exampleSentences: {
+        type: "array",
+        items: { type: "string" },
+        description: "3 different sentences, each under 12 words, that use the word.",
       },
       status: {
         type: "string",
@@ -66,18 +67,18 @@ export const LOOKUP_JSON_SCHEMA = {
  * Deliberately a transform rather than a `.max()` check: a model that returns
  * seven synonyms has still answered the question, and rejecting the whole
  * object over it would fail an otherwise perfect lookup. Duplicates are dropped
- * case-insensitively because the words double as React keys.
+ * case-insensitively because the items double as React keys.
  */
-const wordList = z.array(z.string()).transform((items) => {
+const shortList = z.array(z.string()).transform((items) => {
   const seen = new Set<string>();
   const kept: string[] = [];
   for (const item of items) {
-    const word = item.trim();
-    if (!word) continue;
-    const key = word.toLowerCase();
+    const text = item.trim();
+    if (!text) continue;
+    const key = text.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    kept.push(word);
+    kept.push(text);
     if (kept.length === 3) break;
   }
   return kept;
@@ -87,9 +88,9 @@ export const lookupSchema = z.object({
   word: z.string().trim(),
   partOfSpeech: z.string().trim(),
   meaning: z.string().trim(),
-  synonyms: wordList,
-  antonyms: wordList,
-  exampleSentence: z.string().trim(),
+  synonyms: shortList,
+  antonyms: shortList,
+  exampleSentences: shortList,
   status: z.enum(["ok", "unknown_word", "not_kid_appropriate"]),
 });
 
@@ -116,7 +117,7 @@ export function parseLookup(raw: string): LookupResult | null {
 
   // A model can claim "ok" while leaving the useful fields blank. Treat that as
   // not knowing the word rather than showing the child an empty card.
-  if (result.status === "ok" && (!result.meaning || !result.exampleSentence)) {
+  if (result.status === "ok" && (!result.meaning || result.exampleSentences.length === 0)) {
     return { ...result, status: "unknown_word" };
   }
 
@@ -132,7 +133,7 @@ export function redact(result: LookupResult): LookupResult {
     meaning: "",
     synonyms: [],
     antonyms: [],
-    exampleSentence: "",
+    exampleSentences: [],
     status: result.status,
   };
 }

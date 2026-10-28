@@ -38,7 +38,8 @@ export interface LookupResult {
   synonyms: string[];
   /** Legitimately empty for words with no true opposite. */
   antonyms: string[];
-  exampleSentence: string;
+  /** Up to three, each using the word a different way, as models to copy. */
+  exampleSentences: string[];
   status: LookupStatus;
 }
 

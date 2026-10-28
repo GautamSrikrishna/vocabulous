@@ -48,7 +48,7 @@ How to write:
 - "meaning": ONE short line. Explain it the way you would to a child, not like a dictionary.
 - "synonyms": 1 to 3 everyday words that mean nearly the same thing.
 - "antonyms": 1 to 3 opposites. Give them whenever the word has a clear opposite a child would recognise — happy/sad, brave/scared, big/small, day/night. Only return an empty array [] when the word truly has no opposite at all, the way "dog", "Tuesday" or "blue" do not. Do not invent a made-up opposite to fill the space, but do not leave it empty for a word that plainly has one.
-- "exampleSentence": one sentence, fewer than 12 words, that really uses the word. Make it about things children know: school, family, friends, animals, games, food, weather.
+- "exampleSentences": exactly 3 sentences, each fewer than 12 words, that really use the word. The child copies their pattern to write sentences of their own, so make the three clearly different from each other: a different topic each time (school, family, friends, animals, games, food, weather), and the word in a different place in the sentence where the language allows it. Do not repeat the same sentence with one word swapped.
 
 Choosing "status":
 - "ok" — you know the word and filled everything in.

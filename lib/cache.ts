@@ -40,7 +40,7 @@ export class LruCache<T> {
  * Bump when the cached value's shape changes. A file written by an older
  * version is discarded rather than fed to the UI as if it were current.
  */
-const FILE_VERSION = 1;
+const FILE_VERSION = 2;
 
 interface CacheFile<T> {
   version: number;
